@@ -1,93 +1,78 @@
 import streamlit as st
 import folium
 from streamlit_folium import st_folium
+from data_manager import get_full_report, predict_exhaustion
+from datetime import datetime
 
-# --- 1. THE MOCK DATA (Integration Point) ---
-def get_simulated_data(tension):
-    # This simulates what Person A will eventually provide
-    return [
-        {"name": "Kamanahalli HP", "lat": 13.0158, "lon": 77.6378, "stock_level": 2000 - (tension*15), "type": "Auto-LPG", "priority": "High", "wait_time": 20},
-        {"name": "Indiranagar Indane", "lat": 12.9719, "lon": 77.6412, "stock_level": 1200 - (tension*10), "type": "Domestic", "priority": "Medium", "wait_time": 45},
-        {"name": "Hebbal PSU", "lat": 13.0354, "lon": 77.5988, "stock_level": 400 - (tension*5), "type": "Auto-LPG", "priority": "High", "wait_time": 120},
-        {"name": "Victoria Hospital (Critical)", "lat": 12.9634, "lon": 77.5744, "stock_level": 3000, "type": "Critical-Care", "priority": "Emergency", "wait_time": 5}
-    ]
+st.set_page_config(page_title="Surge-Guard: Smart LPG Monitor", layout="wide", page_icon="🛡️")
 
-# --- 2. PAGE CONFIG ---
-st.set_page_config(page_title="Surge-Guard Dashboard", layout="wide")
+# --- SIDEBAR ---
+st.sidebar.title("🛡️ Surge-Guard")
+with st.sidebar.expander("👤 User Profile", expanded=True):
+    user_brand = st.selectbox("Your LPG Brand", ["Indane", "HP Gas", "Bharat Gas"])
+    user_loc = st.selectbox("Your Area", ["Kamanahalli", "Indiranagar", "Hebbal", "Victoria Hospital"])
 
-# --- 3. SIDEBAR CONTROLS ---
-st.sidebar.title("🛡️ Surge-Guard Controls")
-tension = st.sidebar.slider("Geopolitical Tension", 0, 100, 20)
-show_auto = st.sidebar.toggle("Show Auto-LPG Stations Only")
+with st.sidebar.expander("⚙️ Admin Simulation"):
+    tension = st.slider("Crisis Tension Level", 0, 100, 30)
 
+# --- NEW FEATURE: HOUSEHOLD MONITOR INPUTS ---
 st.sidebar.markdown("---")
-st.sidebar.write("### 📍 Map Legend")
-st.sidebar.write("🟢 **Stable:** > 1500L")
-st.sidebar.write("🟠 **Warning:** 500L - 1500L")
-st.sidebar.write("🔴 **Critical:** < 500L")
+st.sidebar.subheader("🏠 Household Monitor")
+last_booking = st.sidebar.date_input("Last Cylinder Delivery", datetime.now())
+family_members = st.sidebar.number_input("Family Size", min_value=1, max_value=15, value=4)
 
-# --- 4. HEADER & NEWS TICKER ---
-st.title("🛡️ Surge-Guard: Bengaluru LPG Digital Twin")
+# --- DATA FETCHING ---
+all_stations = get_full_report(tension)
+current_user_data = [s for s in all_stations if s['brand'] == user_brand and s['location'] == user_loc]
+my_station = current_user_data[0] if current_user_data else None
 
-if tension > 70:
-    st.error("⚠️ EMERGENCY: Strait of Hormuz closure confirmed. Bengaluru reserves at 48-hour limit.")
-elif tension > 40:
-    st.warning("⚡ ALERT: Commercial LPG prices hiked by ₹195.50. Expect longer queues.")
-else:
-    st.success("✅ Supply Chain Stable: Tankers arriving at Mangalore Port on schedule.")
+# --- HEADER ---
+st.title("🛡️ Surge-Guard: Personal LPG Assistant")
 
-# --- 5. DATA FETCHING ---
-stations = get_simulated_data(tension)
+# --- FEATURE: SMART PREDICTION CARDS ---
+st.subheader("📊 My Household Insights")
+ex_date, days_left = predict_exhaustion(last_booking, family_members)
 
-# --- 6. MAP BUILDING (LIGHT MODE) ---
-def draw_map(data):
-    # CHANGED: 'tiles="OpenStreetMap"' for maximum light-mode readability
-    m = folium.Map(location=[12.9716, 77.5946], zoom_start=12, tiles="OpenStreetMap")
-    
-    for s in data:
-        # Toggle Logic
-        if show_auto and s['type'] != "Auto-LPG":
-            continue
-            
-        # Color Logic
-        if s['stock_level'] < 500: color = "red"
-        elif s['stock_level'] < 1500: color = "orange"
-        else: color = "green"
-            
-        # NEW: Icon Logic (Car for Auto, Home for others, Star for Hospital)
-        if s['type'] == "Auto-LPG":
-            icon_name = "car"
-        elif s['type'] == "Critical-Care":
-            icon_name = "plus-sign"
-        else:
-            icon_name = "home"
-            
-        folium.Marker(
-            [s['lat'], s['lon']],
-            popup=f"<b>{s['name']}</b><br>Stock: {int(s['stock_level'])}L<br>Wait: {s['wait_time']}m",
-            icon=folium.Icon(color=color, icon=icon_name)
-        ).add_to(m)
-        # This automatically fits the map view to show all your markers
-    m.fit_bounds(m.get_bounds())
-    return m
+p1, p2, p3 = st.columns(3)
+with p1:
+    st.metric("Expected Exhaustion", ex_date.strftime("%d %b, %Y"))
+with p2:
+    color = "normal" if days_left > 7 else "inverse"
+    st.metric("Days Remaining", f"{days_left} Days", delta="-1 Day" if days_left < 10 else None, delta_color=color)
+with p3:
+    if days_left <= 5:
+        st.error("🚨 ACTION REQUIRED: Book Cylinder Now!")
+    elif days_left <= 10:
+        st.warning("⚠️ Reminder: Refill booking opens in 2 days.")
+    else:
+        st.success("✅ Stock Healthy: No immediate booking needed.")
 
-# --- 7. RENDER MAP ---
-map_obj = draw_map(stations)
-st_folium(map_obj, width=1200, height=500)
-
-# --- 8. LIVE CITY ANALYTICS (NEW) ---
+# --- FEATURE: LOCAL AVAILABILITY ---
 st.markdown("---")
-st.subheader("📊 Live City Analytics")
-col1, col2, col3 = st.columns(3)
+st.subheader(f"📍 Market Status for {user_brand} in {user_loc}")
+if my_station:
+    c1, c2, c3, c4 = st.columns(4)
+    with c1: st.metric("Current Price", f"₹{my_station['price']}")
+    with c2: st.metric("Dealer Stock", f"{my_station['stock']} Units")
+    with c3: st.metric("Next Supply", my_station['arrival'])
+    with c4: st.metric("Availability", my_station['action'])
+    st.info(f"📞 **Distributor:** {my_station['distributor']} | **Contact:** {my_station['contact']}")
 
-with col1:
-    panic_val = "High" if tension > 60 else "Moderate" if tension > 30 else "Low"
-    st.metric("Estimated Panic Level", panic_val, delta="Reduced by 12%" if tension < 50 else "+5%")
+# --- MAP SECTION ---
+st.markdown("---")
+st.subheader("🗺️ Neighborhood Availability Map")
+m = folium.Map(location=[12.9716, 77.5946], zoom_start=12, tiles="OpenStreetMap")
+for s in all_stations:
+    if s['brand'] == user_brand:
+        color = "red" if s['stock'] < 100 else "orange" if s['stock'] < 400 else "green"
+        folium.Marker([s['lat'], s['lon']], 
+                      popup=f"Stock: {s['stock']}", 
+                      tooltip=f"{s['location']}",
+                      icon=folium.Icon(color=color, icon="info-sign")).add_to(m)
+st_folium(m, width="100%", height=400, key="main_map")
 
-with col2:
-    avg_wait = sum(s['wait_time'] for s in stations) // len(stations)
-    st.metric("Avg. Queue Time", f"{avg_wait} Mins")
-
-with col3:
-    st.write("**City Resource Load**")
-    st.progress(tension / 100)
+# --- ALTERNATIVES TABLE ---
+st.markdown("---")
+st.subheader(f"🔄 Alternatives in {user_loc}")
+alts = [s for s in all_stations if s['location'] == user_loc and s['brand'] != user_brand]
+st.dataframe(alts, use_container_width=True)
