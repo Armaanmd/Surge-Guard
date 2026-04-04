@@ -26,12 +26,16 @@ def get_full_report(tension_level):
             
             days_to_arrival = random.randint(1, 3) + (tension_level // 25)
             arrival_date = (datetime.now() + timedelta(days=days_to_arrival)).strftime("%d %b")
-            price = base_domestic + (tension_level * 0.45)
+            
+            # Feature 1: Explicit Surge Calculation
+            surge_charge = tension_level * 0.45
+            price = base_domestic + surge_charge
             
             entry = {
                 "location": loc['name'], "lat": loc['lat'], "lon": loc['lon'],
                 "brand": b['brand'], "contact": b['contact'], "distributor": b['distributor'],
                 "stock": int(stock), "arrival": arrival_date, "price": round(price, 2),
+                "surge": round(surge_charge, 2),
                 "type": "Critical" if "Hospital" in loc['name'] else "Standard"
             }
             if entry['stock'] < 100: entry['action'] = "🚨 OUT OF STOCK"
@@ -41,9 +45,8 @@ def get_full_report(tension_level):
     return full_data
 
 def predict_exhaustion(booking_date, family_size, num_cylinders=1):
-    """Calculates exhaustion based on cylinder count and family size."""
     total_capacity = 14.2 * num_cylinders
-    daily_usage = family_size * 0.12 # kg per person
+    daily_usage = family_size * 0.12 
     days_it_lasts = total_capacity / daily_usage
     
     exhaustion_date = booking_date + timedelta(days=int(days_it_lasts))
