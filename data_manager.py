@@ -4,7 +4,6 @@ import streamlit as st
 
 @st.cache_data
 def get_full_report(tension_level):
-    # (Kept the same as before to ensure logic continuity)
     base_domestic = 915.50
     locations = [
         {"name": "Kamanahalli", "lat": 13.0158, "lon": 77.6378},
@@ -35,22 +34,18 @@ def get_full_report(tension_level):
                 "stock": int(stock), "arrival": arrival_date, "price": round(price, 2),
                 "type": "Critical" if "Hospital" in loc['name'] else "Standard"
             }
-            
             if entry['stock'] < 100: entry['action'] = "🚨 OUT OF STOCK"
             elif entry['stock'] < 300: entry['action'] = "⚠️ CRITICAL LOW"
             else: entry['action'] = "✅ AVAILABLE"
             full_data.append(entry)
     return full_data
 
-def predict_exhaustion(booking_date, family_size, cylinder_size=14.2):
-    """
-    Predicts the date the gas will run out based on family size.
-    Avg consumption is roughly 0.12kg per person per day.
-    """
-    daily_usage = family_size * 0.12 
-    days_it_lasts = cylinder_size / daily_usage
+def predict_exhaustion(booking_date, family_size, num_cylinders=1):
+    """Calculates exhaustion based on cylinder count and family size."""
+    total_capacity = 14.2 * num_cylinders
+    daily_usage = family_size * 0.12 # kg per person
+    days_it_lasts = total_capacity / daily_usage
     
     exhaustion_date = booking_date + timedelta(days=int(days_it_lasts))
     days_left = (exhaustion_date - datetime.now().date()).days
-    
     return exhaustion_date, days_left
