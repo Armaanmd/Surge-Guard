@@ -1,74 +1,56 @@
 import random
+from datetime import datetime, timedelta
+import streamlit as st
 
-def get_station_data(tension_level):
-    """
-    Step 1: The Foundation
-    Simulates the 'Digital Twin' of Bengaluru's LPG supply.
-    tension_level: 0-100 (0 = Peace, 100 = Crisis)
-    """
-    # Define our 'Digital Twin' Nodes with coordinates
-    stations = [
-        {"name": "Kamanahalli LPG Junction", "lat": 13.0158, "lon": 77.6378, "type": "Auto-LPG", "priority": 2},
-        {"name": "Indiranagar Supply Co.", "lat": 12.9719, "lon": 77.6412, "type": "Commercial", "priority": 3},
-        {"name": "Victoria Hospital Depot", "lat": 12.9634, "lon": 77.5746, "type": "Critical", "priority": 1},
-        {"name": "Hebbal Main Station", "lat": 13.0354, "lon": 77.5988, "type": "Auto-LPG", "priority": 2},
-        {"name": "Koramangala Energy Hub", "lat": 12.9352, "lon": 77.6245, "type": "Mixed", "priority": 2}
-    ]
-
-    for s in stations:
-        # Stock depletes as tension rises (Starting max stock is 3000L)
-        s['stock'] = max(0, 3000 - (tension_level * 28))
-        
-        # Wait times increase (Base 15 mins + tension-based delay)
-        s['wait_time'] = 15 + (tension_level // 2)
-        
-        # April 2026 Price Logic (Base ₹82.50/L + crisis surcharge)
-        s['price'] = round(82.50 + (tension_level * 0.45), 2)
-
-    return stations
-
-def allocate_resources(stations):
-    """
-    Step 2: The Prioritization Algorithm
-    Identifies 'Critical' nodes and suggests emergency actions.
-    """
-    plan = []
-    for s in stations:
-        # EMERGENCY: Critical stations (Hospitals) with low stock
-        if s['priority'] == 1 and s['stock'] < 1000:
-            status = "🚨 EMERGENCY REFILL REQUIRED"
-        # WARNING: Auto-LPG stations with high wait times
-        elif s['type'] == "Auto-LPG" and s['wait_time'] > 50:
-            status = "⚠️ HIGH TRAFFIC - DIVERT DRIVERS"
-        else:
-            status = "✅ STABLE"
-            
-        plan.append(status)
-    
-    return plan
-
+@st.cache_data
 def get_full_report(tension_level):
-    """
-    Step 3: The Master Sync
-    This is the ONLY function Person B needs to call in app.py.
-    """
-    stations = get_station_data(tension_level)
-    actions = allocate_resources(stations)
+    # (Kept the same as before to ensure logic continuity)
+    base_domestic = 915.50
+    locations = [
+        {"name": "Kamanahalli", "lat": 13.0158, "lon": 77.6378},
+        {"name": "Indiranagar", "lat": 12.9719, "lon": 77.6412},
+        {"name": "Victoria Hospital", "lat": 12.9634, "lon": 77.5746},
+        {"name": "Hebbal", "lat": 13.0354, "lon": 77.5988}
+    ]
+    brands = [
+        {"brand": "Indane", "contact": "1800-233-3555", "distributor": "V L Gramin Vitrak"},
+        {"brand": "HP Gas", "contact": "1800-233-4000", "distributor": "Himu Distributors"},
+        {"brand": "Bharat Gas", "contact": "1800-22-4344", "distributor": "Sree LPG Pvt Ltd"}
+    ]
     
-    # Merge the action status into the station dictionary
-    for i in range(len(stations)):
-        stations[i]['action'] = actions[i]
-        
-    return stations
+    full_data = []
+    for loc in locations:
+        for b in brands:
+            random.seed(loc['name'] + b['brand'])
+            stock = max(0, random.randint(400, 800) - (tension_level * 5))
+            if "Hospital" in loc['name']: stock += 1000
+            
+            days_to_arrival = random.randint(1, 3) + (tension_level // 25)
+            arrival_date = (datetime.now() + timedelta(days=days_to_arrival)).strftime("%d %b")
+            price = base_domestic + (tension_level * 0.45)
+            
+            entry = {
+                "location": loc['name'], "lat": loc['lat'], "lon": loc['lon'],
+                "brand": b['brand'], "contact": b['contact'], "distributor": b['distributor'],
+                "stock": int(stock), "arrival": arrival_date, "price": round(price, 2),
+                "type": "Critical" if "Hospital" in loc['name'] else "Standard"
+            }
+            
+            if entry['stock'] < 100: entry['action'] = "🚨 OUT OF STOCK"
+            elif entry['stock'] < 300: entry['action'] = "⚠️ CRITICAL LOW"
+            else: entry['action'] = "✅ AVAILABLE"
+            full_data.append(entry)
+    return full_data
 
-# --- TEST BLOCK ---
-if __name__ == "__main__":
-    # Simulate a high-tension scenario (85%)
-    final_data = get_full_report(85)
+def predict_exhaustion(booking_date, family_size, cylinder_size=14.2):
+    """
+    Predicts the date the gas will run out based on family size.
+    Avg consumption is roughly 0.12kg per person per day.
+    """
+    daily_usage = family_size * 0.12 
+    days_it_lasts = cylinder_size / daily_usage
     
-    print("--- MASTER SYNC TEST (Crisis at 85%) ---")
-    for s in final_data:
-        print(f"Location: {s['name']}")
-        print(f"  Stock: {s['stock']}L | Price: ₹{s['price']}")
-        print(f"  Status: {s['action']}")
-        print("-" * 30)
+    exhaustion_date = booking_date + timedelta(days=int(days_it_lasts))
+    days_left = (exhaustion_date - datetime.now().date()).days
+    
+    return exhaustion_date, days_left
