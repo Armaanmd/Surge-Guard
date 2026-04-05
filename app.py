@@ -14,20 +14,36 @@ from data_manager import (
     get_priority_requests,
     get_stock_alerts  # <--- ADD THIS
 )   
+# In app.py - Update the import line
+from data_manager import (
+    get_full_report, 
+    predict_exhaustion, 
+    calculate_distance, 
+    SEARCHABLE_AREAS, 
+    get_priority_requests, 
+    get_stock_alerts,
+    process_booking
+)
+from data_manager import (
+    get_full_report, predict_exhaustion, calculate_distance, 
+    SEARCHABLE_AREAS, get_priority_requests, get_stock_alerts,
+    process_booking, generate_booking_id, create_receipt_text # <--- ADD THESE
+)
 
 # --- CONFIG ---
 st.set_page_config(page_title="Surge-Guard Dashboard", layout="wide", page_icon="🛡️")
 
 # --- NAVIGATION ---
 st.sidebar.title("🛡️ Surge-Guard Menu")
+# Update the radio button list
 page = st.sidebar.radio("Go to", [
     "🌍 Global Market View", 
+    "🛒 Booking Portal", # <--- ADD THIS
     "🏠 Personal Monitor", 
     "🛺 Auto-Driver Hub", 
     "🏛️ Governance Command",
     "📦 Distribution Manager"
 ])
-
 # --- GLOBAL DATA ---
 tension = st.sidebar.slider("Crisis Tension Level", 0, 100, 30)
 all_stations = get_full_report(tension)
@@ -202,3 +218,69 @@ elif page == "📦 Distribution Manager":
     c1.metric("Total Regional Demand", f"{df_req['Requested Units'].sum()} Units")
     c2.metric("Total Priority Allocation", f"{df_req['Allocated Units'].sum()} Units")
     c3.metric("Stock Gap", f"-{df_req['Gap'].sum()} Units", delta_color="inverse")
+  # --- PAGE: BOOKING PORTAL ---
+elif page == "🛒 Booking Portal":
+    st.title("🛒 Smart Booking & Payment Portal")
+    
+    tabs = st.tabs(["🏠 Individual Booking", "🏭 Industrial Priority"])
+    PRICE_PER_CYL = 915.50
+
+    with tabs[0]:
+        st.subheader("Residential Booking")
+        # 1. Capture data in the form
+        with st.form("individual_booking"):
+            c1, c2 = st.columns(2)
+            name = c1.text_input("Full Name")
+            contact = c2.text_input("Phone Number")
+            address = st.text_area("Delivery Address")
+            area = st.selectbox("Area", list(SEARCHABLE_AREAS.keys()))
+            qty = st.number_input("Quantity", 1, 2, 1)
+            pay_method = st.selectbox("Payment Method", ["UPI / QR", "Card", "Net Banking"])
+            
+            submit_ind = st.form_submit_button("Pay & Confirm")
+
+        # 2. Process OUTSIDE the form
+        if submit_ind:
+            if not name or not address:
+                st.error("Please fill all fields.")
+            else:
+                b_id = generate_booking_id()
+                date, msg = process_booking("Individual", area)
+                bill_data = {
+                    "id": b_id, "name": name, "address": address, "type": "Individual",
+                    "qty": qty, "total": qty * PRICE_PER_CYL, "status": "Paid", "delivery_date": date
+                }
+                st.success(f"✅ Payment Successful! Booking ID: **{b_id}**")
+                
+                receipt_str = create_receipt_text(bill_data)
+                st.text_area("Final Bill", receipt_str, height=200)
+                # This now works because it is outside st.form
+                st.download_button("📥 Download Bill", receipt_str, file_name=f"Bill_{b_id}.txt")
+
+    with tabs[1]:
+        st.subheader("Industrial & Medical Priority")
+        with st.form("industry_booking"):
+            org_name = st.text_input("Organization Name")
+            org_address = st.text_area("Delivery Address (Industry/Hospital)")
+            org_type = st.selectbox("Sector", ["Medical (Critical)", "Manufacturing", "Education"])
+            qty_ind = st.number_input("Bulk Quantity", 5, 500, 10)
+            
+            submit_org = st.form_submit_button("Authorize Bulk Payment")
+
+        if submit_org:
+            if not org_name or not org_address:
+                st.error("Please fill all fields.")
+            else:
+                b_id = generate_booking_id()
+                p_map = {"Medical (Critical)": 1, "Manufacturing": 3, "Education": 4}
+                date, msg = process_booking("Industry/Medical", "Bengaluru", p_map.get(org_type, 5))
+                
+                bill_data = {
+                    "id": b_id, "name": org_name, "address": org_address, "type": f"Bulk ({org_type})",
+                    "qty": qty_ind, "total": qty_ind * (PRICE_PER_CYL + 50), "status": "Priority Paid", "delivery_date": date
+                }
+                
+                st.success(f"⚡ Priority Order Confirmed! ID: **{b_id}**")
+                receipt_str = create_receipt_text(bill_data)
+                st.text_area("Priority Invoice", receipt_str, height=200)
+                st.download_button("📥 Download Priority Invoice", receipt_str, file_name=f"Invoice_{b_id}.txt")
