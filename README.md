@@ -1,8 +1,8 @@
-🛡️ ##Surge-Guard: AI-Driven LPG Supply Chain & Crisis Management
+🛡️ **Surge-Guard: AI-Driven LPG Supply Chain & Crisis Management**
 
 Surge-Guard is an intelligent, full-stack logistics and monitoring dashboard designed to tackle LPG (Liquefied Petroleum Gas) scarcity and distribution inefficiencies in urban environments like Bengaluru. Developed during the BuildWithAI Hackathon, this platform leverages real-time data simulation and IoT-inspired logic to ensure energy security for households, hospitals, and transit sectors.
 
-🚀 The Problem
+🚀 **The Problem**
 During energy crises, LPG distribution suffers from:
 
 Panic Buying & Hoarding: Leading to artificial shortages.
@@ -13,7 +13,8 @@ Critical Sector Neglect: Hospitals and industries losing priority to residential
 
 Logistics Gaps: Delivery vehicles stuck in traffic or moving to empty stations.
 
-✨ Our Solution: Key Features
+✨ **Our Solution: Key Features**
+
 🌍 1. Global Market Intelligence
 Live Supply Heatmaps: Visualizes stock levels across Bengaluru using Folium HeatMaps.
 
@@ -43,7 +44,7 @@ Automated Invoicing: Generates downloadable, unique UUID-based receipts for ever
 
 Priority Validation: Different workflows for residential users vs. bulk industrial orders.
 
-🛠️ Technical Stack
+🛠️ **Technical Stack**
 Frontend: Streamlit (Reactive Web Framework)
 
 Geospatial: Folium & Streamlit-Folium
@@ -52,14 +53,14 @@ Data Processing: Pandas & NumPy
 
 Logic: Python 3.x, UUID for transaction tracking, and custom Math/Physics models for distance (Haversine Formula) and exhaustion predictions.
 
-📈 Achievements & Impact
+📈 **Achievements & Impact**
 Optimized Distribution: Reduced potential stock-outs in critical zones by 30% through simulated redistribution.
 
 Transparency: Created a unified "Single Source of Truth" for LPG pricing, eliminating vendor-side price manipulation.
 
 Scalability: The architecture is designed to integrate directly with physical IoT weight sensors and GPS trackers on delivery trucks.
 
-🔧 Installation & Setup
+🔧 **Installation & Setup**
 Clone the repository:
 
 Bash
@@ -74,7 +75,7 @@ Run the application:
 Bash
 streamlit run app.py
 
-👥 #Deep Gen
+👥 **Deep Gen**
 Mohd Armaan - backend Developer & Systems Architect
 Roshani Nishad - frontend developer & System Architect
 
