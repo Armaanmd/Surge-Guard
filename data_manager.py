@@ -102,3 +102,20 @@ def get_priority_requests():
             "Gap": requested - allocated
         })
     return requests
+# Add this to data_manager.py
+
+def get_stock_alerts(all_stations):
+    """Identifies locations where stock is critically low or dropping fast."""
+    alerts = []
+    for s in all_stations:
+        if s['stock'] < 150:
+            alerts.append({
+                "level": "ERROR",
+                "msg": f"CRITICAL: {s['brand']} at {s['location']} is almost empty ({s['stock']} units left)!"
+            })
+        elif s['stock'] < 300:
+            alerts.append({
+                "level": "WARNING",
+                "msg": f"LOW STOCK: {s['brand']} at {s['location']} has dropped below 300 units."
+            })
+    return alerts
