@@ -119,3 +119,49 @@ def get_stock_alerts(all_stations):
                 "msg": f"LOW STOCK: {s['brand']} at {s['location']} has dropped below 300 units."
             })
     return alerts
+# Add this to data_manager.py
+
+def process_booking(user_type, location, priority_level=5):
+    """
+    Calculates delivery dates based on priority.
+    """
+    base_days = random.randint(1, 2)
+    
+    if user_type == "Industry/Medical":
+        # Higher priority (lower number) = faster delivery
+        delivery_days = base_days + (priority_level // 2)
+        msg = f"PRIORITY DISPATCH: Allocated via Green Channel."
+    else:
+        # Individual bookings
+        delivery_days = base_days + random.randint(2, 5)
+        msg = f"Booking Accepted by Local Agency."
+    
+    expected_date = (datetime.now() + timedelta(days=delivery_days)).strftime("%d %b, %Y")
+    return expected_date, msg
+import uuid # Add this import at the top of data_manager.py
+
+def generate_booking_id():
+    """Generates a unique 8-character Booking ID."""
+    return str(uuid.uuid4()).upper()[:8]
+
+def create_receipt_text(data):
+    """Formats the booking data into a professional receipt string."""
+    receipt = f"""
+    -------------------------------------------
+    🔥 SURGE-GUARD LPG RECEIPT 🔥
+    -------------------------------------------
+    Booking ID: {data['id']}
+    Date: {datetime.now().strftime('%Y-%m-%d %H:%M')}
+    Customer/Org: {data['name']}
+    Address: {data['address']}
+    -------------------------------------------
+    Type: {data['type']}
+    Quantity: {data['qty']} Cylinders
+    Total Paid: ₹{data['total']} (Incl. Taxes)
+    -------------------------------------------
+    Status: {data['status']}
+    Est. Delivery: {data['delivery_date']}
+    -------------------------------------------
+    Thank you for using Surge-Guard!
+    """
+    return receipt
