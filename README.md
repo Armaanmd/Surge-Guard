@@ -77,6 +77,8 @@ Bash
 streamlit run app.py
 
 👥 **Deep Gen**
-Mohd Armaan - backend Developer & Systems Architect
-Roshani Nishad - frontend developer & System Architect
+
+▫️**Mohd Armaan**- backend Developer & Systems Architect
+
+▫️**Roshani Nishad** - frontend developer & System Architect
 
