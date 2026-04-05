@@ -5,6 +5,15 @@ from streamlit_folium import st_folium
 from data_manager import get_full_report, predict_exhaustion, calculate_distance, SEARCHABLE_AREAS, get_priority_requests
 from datetime import datetime
 import pandas as pd
+# In app.py
+from data_manager import (
+    get_full_report, 
+    predict_exhaustion, 
+    calculate_distance, 
+    SEARCHABLE_AREAS, 
+    get_priority_requests,
+    get_stock_alerts  # <--- ADD THIS
+)   
 
 # --- CONFIG ---
 st.set_page_config(page_title="Surge-Guard Dashboard", layout="wide", page_icon="🛡️")
@@ -32,6 +41,14 @@ if page == "🌍 Global Market View":
     my_station = next((s for s in all_stations if s['brand'] == user_brand and s['location'] == user_loc), None)
 
     st.title("🌍 Bengaluru LPG Market Intelligence")
+    alerts = get_stock_alerts(all_stations)
+    if alerts:
+        with st.expander("🔔 Live Supply Alerts", expanded=True):
+            for a in alerts:
+                if a['level'] == "ERROR":
+                    st.error(a['msg'])
+                else:
+                    st.warning(a['msg'])
     if tension > 50 and my_station:
         st.warning(f"🚨 **High Tension Alert:** Prices include a ₹{my_station['surge']} surge due to scarcity.")
     if my_station:
@@ -146,6 +163,19 @@ elif page == "🏛️ Governance Command":
 # --- PAGE 5: DISTRIBUTION MANAGER ---
 elif page == "📦 Distribution Manager":
     st.title("📦 Bulk Priority Allocation Manager")
+    st.subheader("📩 Incoming Emergency Requests")
+    low_stock_sites = [s for s in all_stations if s['stock'] < 300]
+    
+    if low_stock_sites:
+        for site in low_stock_sites:
+            col_a, col_b = st.columns([3, 1])
+            col_a.write(f"📌 **{site['location']}** ({site['brand']}) requests emergency refill. Current: **{site['stock']} units**")
+            if col_b.button(f"Approve Refill", key=f"btn_{site['location']}_{site['brand']}"):
+                st.toast(f"Refill dispatched to {site['location']}!")
+    else:
+        st.success("No emergency refill requests at this time.")
+    
+    st.divider()
     st.markdown("### Decision Support for Authorized Distributors")
     
     req_data = get_priority_requests()
