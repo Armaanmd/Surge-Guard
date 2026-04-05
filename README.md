@@ -64,7 +64,8 @@ Scalability: The architecture is designed to integrate directly with physical Io
 Clone the repository:
 
 Bash
-git clone https://github.com/your-username/SurgeGuard.git
+git clone [https://github.com/your-username/SurgeGuard](https://github.com/Armaanmd/Surge-Guard)
+
 cd SurgeGuard
 Install dependencies:
 
